@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# PyCharm 
+.idea
+
+# Cache files
+known-songs.json
+last-player-state.json
