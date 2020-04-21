@@ -11,10 +11,8 @@ class PlayerState:
     def save(self):
         try:
             state = {'genre': self.genre, 'song_path': self.song_path}
-            with open(config.LAST_PLAYER_STATE_FILE, 'w') as json_file:
+            with open(config.LAST_PLAYER_STATE_FILE, 'w+') as json_file:
                 json.dump(state, json_file)
-        except FileNotFoundError as e:
-            print('  Could not read player state. Playing a random file instead.')
         except Exception as e:
             print('  Failed to save player state: {}'.format(str(e)))
 
@@ -24,6 +22,8 @@ class PlayerState:
             with open(config.LAST_PLAYER_STATE_FILE, 'r') as json_file:
                 data = json.load(json_file)
                 return cls(data['genre'], data['song_path'])
+        except FileNotFoundError:
+            print('  Could not read player state. Playing a random file instead.')
         except Exception as e:
             print('  Failed to read player state: {}'.format(str(e)))
             return None

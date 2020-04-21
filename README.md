@@ -23,6 +23,6 @@ The following instructions setup a Linux PC as a music player with IR remote con
 5. Setup this to run on boot with context (TODO)
 
 # See Also
-exiftool -- for getting song metadata
+[exiftool](https://exiftool.org/) -- to extract song genres from metadata
 
-ffplay (provisionally) -- for playing songs
+[ffplay](https://ffmpeg.org/ffplay.html) -- to play songs

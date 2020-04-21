@@ -1,3 +1,4 @@
+import asyncio
 import glob
 import json
 import os
@@ -5,6 +6,7 @@ import random
 
 import config
 from player_state import PlayerState
+from progress import Progress
 import song_analyzer
 
 
@@ -19,8 +21,8 @@ class Playlist:
         try:
             return cls._load_known_songs()
         except Exception as e:
-            print('  Could not load known songs list: {}'.format(str(e)))
-            print('    Regenerating song db...')
+            print('Could not load known songs list: {}'.format(str(e)))
+            print('  Regenerating song db...')
             return cls._generate_song_db()
 
     @classmethod
@@ -37,20 +39,43 @@ class Playlist:
         except Exception as e:
             print('  Failed to save known songs: {}'.format(str(e)))
 
+    @staticmethod
+    def _add_song_to_known(known_songs, genres, file):
+        for genre in genres:
+            if genre not in known_songs:
+                known_songs[genre] = {}
+            known_songs[genre][file] = genres
+
     @classmethod
     def _generate_song_db(cls):
         known_songs = {}
         song_count = 0
-        for file in glob.glob(os.path.join(config.SONG_FOLDER, '*')):
-            genres = song_analyzer.analyze_song(file)
+        progress = Progress(object='files', report_every=20)
+
+        files = glob.glob(os.path.join(config.SONG_FOLDER, '**/*.*'))
+        progress.start(count=len(files))
+
+        async def _scan_file(file_to_scan):
+            found_genres = await song_analyzer.analyze_song(file_to_scan)
+            progress.increment()
+            return {'file': file_to_scan, 'genres': found_genres}
+
+        async def _scan_files():
+            song_analyzer.set_process_limiter()
+            tasks = [_scan_file(file_to_scan) for file_to_scan in files]
+            return await asyncio.gather(*tasks)
+
+        files_with_genres = asyncio.run(_scan_files())
+        for file_with_genre in files_with_genres:
+            genres = file_with_genre['genres']
+            file = file_with_genre['file']
             if genres is not None:
                 song_count += 1
-                for genre in genres:
-                    if genre not in known_songs:
-                        known_songs[genre] = {}
-                    known_songs[genre][file] = genres
+                Playlist._add_song_to_known(known_songs, genres, file)
 
-        print('Found {} songs in {} genres.'.format(song_count, len(known_songs)))
+        scan_time = progress.stop()
+        print('    Found {} songs in {} genres in {:.2f} seconds.'.format(
+            song_count, len(known_songs), scan_time))
         playlist = cls(known_songs)
         playlist.save_known_songs()
         return playlist
@@ -73,7 +98,6 @@ class Playlist:
     def _prep_song_list(self, genre, reset=False):
         if self.genre_song_list is None or reset:
             self.genre_song_list = list(self.known_songs[genre])
-            print(self.genre_song_list)
 
     def next_song(self, state):
         self._prep_song_list(state.genre)
@@ -98,6 +122,7 @@ class Playlist:
         next_genre = self.genre_list[next_genre_index]
         self._prep_song_list(next_genre, reset=True)
 
+        print('Genre: {}'.format(next_genre))
         return PlayerState(next_genre, self.genre_song_list[len(self.genre_song_list) - 1])
 
     def previous_playlist(self, state):
@@ -106,6 +131,7 @@ class Playlist:
         next_genre = self.genre_list[next_genre_index]
         self._prep_song_list(next_genre, reset=True)
 
+        print('Genre: {}'.format(next_genre))
         return PlayerState(next_genre, self.genre_song_list[len(self.genre_song_list) - 1])
 
     def random_song_anywhere(self, state):

@@ -5,22 +5,23 @@ import config
 from playlist import Playlist
 from player_state import PlayerState
 from player import Player
+import song_analyzer
 
 
 def _print_help():
-    # TODO add play/pause and don't use tabs!!!
     print('Commands:')
     print('  Operation:')
-    print('    Toggle excluded genres:\t"{}"'.format(config.TOGGLE_EXCLUDED_GENRES_KEY))
-    print('    Exit:\t\t\t\t\t"{}"'.format(config.QUIT_KEY))
+    print('    Play/Pause:              "{}"'.format(config.PLAY_PAUSE_KEY))
+    print('    Toggle excluded genres:  "{}"'.format(config.TOGGLE_EXCLUDED_GENRES_KEY))
+    print('    Exit:                    "{}"'.format(config.QUIT_KEY))
     print('  Current Playlist:')
-    print('    Next Song:\t\t"{}"'.format(config.NEXT_SONG_KEY))
-    print('    Previous Song:\t"{}"'.format(config.PREVIOUS_SONG_KEY))
-    print('    Random Song:\t"{}"'.format(config.RANDOM_SONG_IN_PLAYLIST_KEY))
+    print('    Next Song:               "{}"'.format(config.NEXT_SONG_KEY))
+    print('    Previous Song:           "{}"'.format(config.PREVIOUS_SONG_KEY))
+    print('    Random Song:             "{}"'.format(config.RANDOM_SONG_IN_PLAYLIST_KEY))
     print('  Playlists:')
-    print('    Next Playlist:\t\t\t"{}"'.format(config.NEXT_PLAYLIST_KEY))
-    print('    Previous Playlist:\t\t"{}"'.format(config.PREVIOUS_PLAYLIST_KEY))
-    print('    Random Song Anywhere:\t"{}"'.format(config.RANDOM_SONG_ANYWHERE_KEY))
+    print('    Next Playlist:           "{}"'.format(config.NEXT_PLAYLIST_KEY))
+    print('    Previous Playlist:       "{}"'.format(config.PREVIOUS_PLAYLIST_KEY))
+    print('    Random Song Anywhere:    "{}"'.format(config.RANDOM_SONG_ANYWHERE_KEY))
 
 
 def _play_and_save(current_player, player_state):
@@ -32,12 +33,15 @@ if __name__ == '__main__':
     print('Playlist DJ 1.0')
     _print_help()
 
+    song_analyzer.allow_subprocess_in_asyncio()
     player = Player()
     song_list = Playlist.load()
     state = PlayerState.from_saved_state()
 
     if state is None:
         state = song_list.random_song_anywhere(state)
+
+    print('Genre: {}'.format(state.genre))
     _play_and_save(player, state)
 
     song_transition_map = {

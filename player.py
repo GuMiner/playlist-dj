@@ -23,7 +23,7 @@ class Player:
 
     def play(self, song_path):
         self.stop_current_song()
-        print('    Playing "{}"'.format(song_path))
+        print('  Playing "{}"'.format(song_path))
 
         args = [config.FFPLAY_TOOL_PATH, '-nodisp', '-loglevel', 'error', '-infbuf', '-autoexit', song_path]
         self._current_player = subprocess.Popen(args)
