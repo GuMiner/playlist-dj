@@ -8,6 +8,7 @@ from player import Player
 
 
 def _print_help():
+    # TODO add play/pause and don't use tabs!!!
     print('Commands:')
     print('  Operation:')
     print('    Toggle excluded genres:\t"{}"'.format(config.TOGGLE_EXCLUDED_GENRES_KEY))
@@ -54,6 +55,8 @@ if __name__ == '__main__':
         if char in song_transition_map:
             state = song_transition_map[char](state)
             _play_and_save(player, state)
+        elif char == config.PLAY_PAUSE_KEY:
+            player.play_pause();
         elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
             song_list.toggle_excluded_genres()
         elif char == config.QUIT_KEY:
