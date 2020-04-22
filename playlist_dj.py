@@ -5,7 +5,6 @@ import config
 from playlist import Playlist
 from player_state import PlayerState
 from player import Player
-import song_analyzer
 
 
 def _print_help():
@@ -33,7 +32,6 @@ if __name__ == '__main__':
     print('Playlist DJ 1.0')
     _print_help()
 
-    song_analyzer.allow_subprocess_in_asyncio()
     player = Player()
     song_list = Playlist.load()
     state = PlayerState.from_saved_state()
@@ -60,7 +58,7 @@ if __name__ == '__main__':
             state = song_transition_map[char](state)
             _play_and_save(player, state)
         elif char == config.PLAY_PAUSE_KEY:
-            player.play_pause();
+            player.play_pause()
         elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
             song_list.toggle_excluded_genres()
         elif char == config.QUIT_KEY:

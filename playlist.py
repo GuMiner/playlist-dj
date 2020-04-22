@@ -1,4 +1,3 @@
-import asyncio
 import glob
 import json
 import os
@@ -55,17 +54,7 @@ class Playlist:
         files = glob.glob(os.path.join(config.SONG_FOLDER, '**/*.*'))
         progress.start(count=len(files))
 
-        async def _scan_file(file_to_scan):
-            found_genres = await song_analyzer.analyze_song(file_to_scan)
-            progress.increment()
-            return {'file': file_to_scan, 'genres': found_genres}
-
-        async def _scan_files():
-            song_analyzer.set_process_limiter()
-            tasks = [_scan_file(file_to_scan) for file_to_scan in files]
-            return await asyncio.gather(*tasks)
-
-        files_with_genres = asyncio.run(_scan_files())
+        files_with_genres = song_analyzer.scan_files(files, progress)
         for file_with_genre in files_with_genres:
             genres = file_with_genre['genres']
             file = file_with_genre['file']

@@ -1,22 +1,41 @@
-import asyncio
-import asyncio.subprocess
-import sys
+import concurrent.futures
+import subprocess
 
 import config
 
-process_limiter = None
+
+def scan_files(files, progress):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = [executor.submit(_scan_file, file, progress) for file in files]
+        return [future.result() for future in futures]
 
 
-def set_process_limiter(limit=20):
-    global process_limiter
-    process_limiter = asyncio.Semaphore(limit)
+def _scan_file(file_to_scan, progress):
+    found_genres = _analyze_song(file_to_scan)
+
+    progress.increment()
+    return {'file': file_to_scan, 'genres': found_genres}
 
 
-def allow_subprocess_in_asyncio():
-    if sys.platform == 'win32':
-        # https://bugs.python.org/issue33792 yay Python async/await on Windows bug...
-        policy = asyncio.get_event_loop_policy()
-        policy._loop_factory = asyncio.ProactorEventLoop
+# Returns the genres a song is in or None if the path does not refer to a song
+def _analyze_song(song_path):
+    ignore_song_from_extension = any([song_path.upper().endswith(ext) for ext in config.KNOWN_FILETYPES_TO_IGNORE])
+    if ignore_song_from_extension:
+        print('      Ignoring "{}" from the extension.'.format(song_path))
+        return None
+
+    try:
+        args = [config.EXIF_TOOL_PATH, '-Genre', song_path]
+        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        if result.returncode == 0:
+            return _decode_genre_output(result.stdout)
+        else:
+            print('      exiftool returned {}: {}'.format(result.returncode, result.stdout))
+            return None
+    except Exception as e:
+        print('      Could not parse "{}": {}'.format(song_path, str(e)))
+        return None
 
 
 def _decode_genre_output(stdout):
@@ -25,29 +44,3 @@ def _decode_genre_output(stdout):
     genres = stdout.split(':')[1].strip()
     genre_list = genres.split('/')
     return genre_list
-
-
-# Returns the genres a song is in or None if the path does not refer to a song
-async def analyze_song(song_path):
-    ignore_song_from_extension = any([song_path.upper().endswith(ext) for ext in config.KNOWN_FILETYPES_TO_IGNORE])
-    if ignore_song_from_extension:
-        print('      Ignoring "{}" from the extension.'.format(song_path))
-        return None
-
-    try:
-        async with process_limiter:
-            exiftool_process = await asyncio.create_subprocess_exec(
-                config.EXIF_TOOL_PATH, '-Genre', song_path,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
-            stdout, _ = await exiftool_process.communicate()
-
-        stdout = stdout.decode(encoding='UTF8')
-        exit_code = exiftool_process.returncode
-        if exit_code == 0:
-            return _decode_genre_output(stdout)
-        else:
-            print('      exiftool returned {}: {}'.format(exit_code, stdout))
-            return None
-    except Exception as e:
-        print('      Could not parse "{}": {}'.format(song_path, str(e)))
-        return None
