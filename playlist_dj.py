@@ -32,7 +32,6 @@ if __name__ == '__main__':
     print('Playlist DJ 1.0')
     _print_help()
 
-    player = Player()
     song_list = Playlist.load()
     state = PlayerState.from_saved_state()
 
@@ -40,6 +39,13 @@ if __name__ == '__main__':
         state = song_list.random_song_anywhere(state)
 
     print('Genre: {}'.format(state.genre))
+
+    def _next_song():
+        global state
+        state = song_list.next_song(state)
+        _play_and_save(player, state)
+
+    player = Player(next_song_callback=_next_song)
     _play_and_save(player, state)
 
     song_transition_map = {
@@ -52,17 +58,23 @@ if __name__ == '__main__':
     }
 
     print('Waiting for command: ')
-    while True:
+    alive = True
+    while alive:
         char = readchar.readchar().decode('utf-8').upper()
-        if char in song_transition_map:
-            state = song_transition_map[char](state)
-            _play_and_save(player, state)
-        elif char == config.PLAY_PAUSE_KEY:
-            player.play_pause()
-        elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
-            song_list.toggle_excluded_genres()
-        elif char == config.QUIT_KEY:
-            player.stop_current_song()
-            sys.exit(0)
-        else:
-            print('Unrecognized command "{}"'.format(char))
+
+        # Don't move to the next song automatically when processing a command
+        with player.song_action_mutex:
+            if char in song_transition_map:
+                state = song_transition_map[char](state)
+                _play_and_save(player, state)
+            elif char == config.PLAY_PAUSE_KEY:
+                player.play_pause()
+            elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
+                song_list.toggle_excluded_genres()
+            elif char == config.QUIT_KEY:
+                alive = False
+            else:
+                print('Unrecognized command "{}"'.format(char))
+
+    player.terminate()
+    sys.exit(0)

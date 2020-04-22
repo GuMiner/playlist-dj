@@ -128,6 +128,8 @@ class Playlist:
         self._prep_song_list(genre, reset=True)
 
         song = random.choice(self.genre_song_list)
+
+        print('Genre: {}'.format(genre))
         return PlayerState(genre, song)
 
     def random_song_in_playlist(self, state):
