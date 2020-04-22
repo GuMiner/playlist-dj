@@ -70,7 +70,15 @@ if __name__ == '__main__':
             elif char == config.PLAY_PAUSE_KEY:
                 player.play_pause()
             elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
-                song_list.toggle_excluded_genres()
+                state.exclude_from_genre = not state.exclude_from_genre
+                print("Excluding songs based on genre: {}".format(state.exclude_from_genre))
+                if state.exclude_from_genre:
+                    # TODO -- if this is an excluded genre song, or an excluded genre move to the next one
+                    # Because of this, assume we cannot be on an excluded genre
+                    # Or, on a non-excluded genre with only excluded songs
+                    pass
+
+                state.save()
             elif char == config.QUIT_KEY:
                 alive = False
             else:
