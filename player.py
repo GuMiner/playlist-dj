@@ -38,7 +38,10 @@ class Player:
     def play_pause(self):
         if self._current_player is not None:
             process = psutil.Process(self._current_player.pid)
-            if process.status() == 'running':
+            status = process.status()
+
+            # Windows uses 'running', Linux uses 'sleeping'
+            if status == 'running' or status == 'sleeping':
                 process.suspend()
             else:
                 process.resume()

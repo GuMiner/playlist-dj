@@ -60,7 +60,11 @@ if __name__ == '__main__':
     print('Waiting for command: ')
     alive = True
     while alive:
-        char = readchar.readchar().decode('utf-8').upper()
+        char = readchar.readchar()
+        # Some systems return bytes. Other, strings.
+        if not isinstance(char, str):
+            char = char.decode('utf-8')
+        char = char.upper()
 
         # Don't move to the next song automatically when processing a command
         with player.song_action_mutex:
