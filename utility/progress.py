@@ -2,8 +2,8 @@ import time
 
 
 class Progress:
-    def __init__(self, object, report_every):
-        self._object = object
+    def __init__(self, scanning_object, report_every):
+        self._object = scanning_object
 
         self._count = 0
         self._max = -1

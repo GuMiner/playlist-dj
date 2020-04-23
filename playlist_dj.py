@@ -1,7 +1,8 @@
 import readchar
 import sys
 
-import config
+from config import keys, environment
+import known_songs_state
 from playlist import Playlist
 from player_state import PlayerState
 from player import Player
@@ -10,17 +11,17 @@ from player import Player
 def _print_help():
     print('Commands:')
     print('  Operation:')
-    print('    Play/Pause:              "{}"'.format(config.PLAY_PAUSE_KEY))
-    print('    Toggle excluded genres:  "{}"'.format(config.TOGGLE_EXCLUDED_GENRES_KEY))
-    print('    Exit:                    "{}"'.format(config.QUIT_KEY))
+    print('    Play/Pause:              "{}"'.format(keys.PLAY_PAUSE_KEY))
+    print('    Toggle excluded genres:  "{}"'.format(keys.TOGGLE_EXCLUDED_GENRES_KEY))
+    print('    Exit:                    "{}"'.format(keys.QUIT_KEY))
     print('  Current Playlist:')
-    print('    Next Song:               "{}"'.format(config.NEXT_SONG_KEY))
-    print('    Previous Song:           "{}"'.format(config.PREVIOUS_SONG_KEY))
-    print('    Random Song:             "{}"'.format(config.RANDOM_SONG_IN_PLAYLIST_KEY))
+    print('    Next Song:               "{}"'.format(keys.NEXT_SONG_KEY))
+    print('    Previous Song:           "{}"'.format(keys.PREVIOUS_SONG_KEY))
+    print('    Random Song:             "{}"'.format(keys.RANDOM_SONG_IN_PLAYLIST_KEY))
     print('  Playlists:')
-    print('    Next Playlist:           "{}"'.format(config.NEXT_PLAYLIST_KEY))
-    print('    Previous Playlist:       "{}"'.format(config.PREVIOUS_PLAYLIST_KEY))
-    print('    Random Song Anywhere:    "{}"'.format(config.RANDOM_SONG_ANYWHERE_KEY))
+    print('    Next Playlist:           "{}"'.format(keys.NEXT_PLAYLIST_KEY))
+    print('    Previous Playlist:       "{}"'.format(keys.PREVIOUS_PLAYLIST_KEY))
+    print('    Random Song Anywhere:    "{}"'.format(keys.RANDOM_SONG_ANYWHERE_KEY))
 
 
 def _play_and_save(current_player, player_state):
@@ -28,17 +29,32 @@ def _play_and_save(current_player, player_state):
     player_state.save()
 
 
+def _resume_playing_on_start(current_player, player_state):
+    print('Genre: {}'.format(player_state.genre))
+    _play_and_save(current_player, state)
+
+
+def _end_program():
+    if shutdown and environment.is_linux():
+        import subprocess
+        result = subprocess.run(["gnome-session-quit", "--power-off", "--force"],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        print("shutdown: {}: {}", result.returncode, result.stdout)
+    elif shutdown:
+        print('Shutdown is not implemented on Windows yet, sorry.')
+
+    sys.exit(0)
+
+
 if __name__ == '__main__':
-    print('Playlist DJ 1.0')
+    print('Playlist DJ 2.0')
     _print_help()
 
-    song_list = Playlist.load()
+    song_list = Playlist(known_songs_state.load())
     state = PlayerState.from_saved_state()
 
     if state is None:
         state = song_list.random_song_anywhere(state)
-
-    print('Genre: {}'.format(state.genre))
 
     def _next_song():
         global state
@@ -46,20 +62,21 @@ if __name__ == '__main__':
         _play_and_save(player, state)
 
     player = Player(next_song_callback=_next_song)
-    _play_and_save(player, state)
+    _resume_playing_on_start(player, state)
 
     song_transition_map = {
-        config.NEXT_SONG_KEY: song_list.next_song,
-        config.PREVIOUS_SONG_KEY: song_list.previous_song,
-        config.NEXT_PLAYLIST_KEY: song_list.next_playlist,
-        config.PREVIOUS_PLAYLIST_KEY: song_list.previous_playlist,
-        config.RANDOM_SONG_IN_PLAYLIST_KEY: song_list.random_song_in_playlist,
-        config.RANDOM_SONG_ANYWHERE_KEY: song_list.random_song_anywhere
+        keys.NEXT_SONG_KEY: song_list.next_song,
+        keys.PREVIOUS_SONG_KEY: song_list.previous_song,
+        keys.NEXT_PLAYLIST_KEY: song_list.next_playlist,
+        keys.PREVIOUS_PLAYLIST_KEY: song_list.previous_playlist,
+        keys.RANDOM_SONG_IN_PLAYLIST_KEY: song_list.random_song_in_playlist,
+        keys.RANDOM_SONG_ANYWHERE_KEY: song_list.random_song_anywhere
     }
 
     print('Waiting for command: ')
     alive = True
-    while alive:
+    shutdown = False
+    while alive and not shutdown:
         char = readchar.readchar()
         # Some systems return bytes. Other, strings.
         if not isinstance(char, str):
@@ -71,9 +88,9 @@ if __name__ == '__main__':
             if char in song_transition_map:
                 state = song_transition_map[char](state)
                 _play_and_save(player, state)
-            elif char == config.PLAY_PAUSE_KEY:
+            elif char == keys.PLAY_PAUSE_KEY:
                 player.play_pause()
-            elif char == config.TOGGLE_EXCLUDED_GENRES_KEY:
+            elif char == keys.TOGGLE_EXCLUDED_GENRES_KEY:
                 state.exclude_from_genre = not state.exclude_from_genre
                 print("Excluding songs based on genre: {}".format(state.exclude_from_genre))
                 if state.exclude_from_genre:
@@ -83,10 +100,12 @@ if __name__ == '__main__':
                     pass
 
                 state.save()
-            elif char == config.QUIT_KEY:
+            elif char == keys.QUIT_KEY:
                 alive = False
+            elif char == keys.SHUTDOWN_KEY:
+                shutdown = True
             else:
                 print('Unrecognized command "{}"'.format(char))
 
     player.terminate()
-    sys.exit(0)
+    _end_program()

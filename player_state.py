@@ -1,6 +1,6 @@
 import json
 
-import config
+from config import song_db
 
 
 class PlayerState:
@@ -12,7 +12,7 @@ class PlayerState:
     def save(self):
         try:
             state = {'genre': self.genre, 'song_path': self.song_path, 'exclude_from_genre': self.exclude_from_genre}
-            with open(config.LAST_PLAYER_STATE_FILE, 'w+') as json_file:
+            with open(song_db.LAST_PLAYER_STATE_FILE, 'w+') as json_file:
                 json.dump(state, json_file)
         except Exception as e:
             print('  Failed to save player state: {}'.format(str(e)))
@@ -20,7 +20,7 @@ class PlayerState:
     @classmethod
     def from_saved_state(cls):
         try:
-            with open(config.LAST_PLAYER_STATE_FILE, 'r') as json_file:
+            with open(song_db.LAST_PLAYER_STATE_FILE, 'r') as json_file:
                 data = json.load(json_file)
                 return cls(data['genre'], data['song_path'], data['exclude_from_genre'])
         except FileNotFoundError:

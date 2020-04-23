@@ -2,12 +2,13 @@ import psutil
 import subprocess
 import time
 import threading
+import typing
 
-import config
+from config import environment
 
 
 class Player:
-    _current_player: subprocess.Popen
+    _current_player: typing.Optional[subprocess.Popen]
 
     def __init__(self, next_song_callback):
         self._current_player = None
@@ -50,5 +51,5 @@ class Player:
         self.stop_current_song()
         print('  Playing "{}"'.format(song_path))
 
-        args = [config.FFPLAY_TOOL_PATH, '-nodisp', '-loglevel', 'error', '-infbuf', '-autoexit', song_path]
+        args = [environment.FFPLAY_TOOL_PATH, '-nodisp', '-loglevel', 'error', '-infbuf', '-autoexit', song_path]
         self._current_player = subprocess.Popen(args)

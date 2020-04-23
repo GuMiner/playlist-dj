@@ -1,7 +1,7 @@
 import concurrent.futures
 import subprocess
 
-import config
+from config import environment, song_db
 
 
 def scan_files(files, progress):
@@ -19,13 +19,14 @@ def _scan_file(file_to_scan, progress):
 
 # Returns the genres a song is in or None if the path does not refer to a song
 def _analyze_song(song_path):
-    ignore_song_from_extension = any([song_path.upper().endswith(ext) for ext in config.KNOWN_FILETYPES_TO_IGNORE])
+    ignore_song_from_extension = any(
+        [song_path.upper().endswith(ext) for ext in song_db.KNOWN_FILETYPES_TO_IGNORE])
     if ignore_song_from_extension:
         print('      Ignoring "{}" from the extension.'.format(song_path))
         return None
 
     try:
-        args = [config.EXIF_TOOL_PATH, '-Genre', song_path]
+        args = [environment.EXIF_TOOL_PATH, '-Genre', song_path]
         result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
         if result.returncode == 0:
